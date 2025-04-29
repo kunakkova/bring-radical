@@ -1,141 +1,101 @@
 #include <iostream>
 #include <cmath>
 #include <utility>
+#include <vector>
 
-// Функция f(x) = x^5 + x + a
-// Принимает:
-//   x - точка, в которой вычисляется функция
-//   a - параметр уравнения
-// Возвращает значение функции в точке x
-double f(double x, double a) {
+// Цвета ANSI
+#define RESET   "\033[0m"
+#define RED     "\033[31m"
+#define GREEN   "\033[32m"
+#define BLUE    "\033[34m"
+
+inline double f(double x, double a) {
     return std::pow(x, 5) + x + a;
 }
 
-// Производная функции f'(x) = 5x^4 + 1
-// Принимает:
-//   x - точка, в которой вычисляется производная
-// Возвращает значение производной в точке x
-double df(double x) {
+inline double df(double x) {
     return 5 * std::pow(x, 4) + 1;
 }
 
-// Нахождение интервала [left, right], где f(left) * f(right) < 0
-// (интервал, содержащий корень, по теореме о промежуточном значении)
-// Принимает:
-//   a - параметр уравнения
-// Возвращает пару значений (left, right) - границы интервала
-std::pair<double, double> find_interval(double a) {
+inline std::pair<double, double> find_interval(double a) {
     if (a >= 0) {
-        // Для неотрицательных a корень находится в отрицательной области
-        double left = -2; // Начальное значение левой границы
-        // Удваиваем left, пока функция не станет отрицательной
+        double left = -2;
         while (f(left, a) >= 0) {
             left *= 2;
         }
-        // Правая граница - 0, так как f(0) = a >= 0
         return {left, 0};
     } else {
-        // Для отрицательных a корень находится в положительной области
-        double right = 1; // Начальное значение правой границы
-        // Удваиваем right, пока функция не станет положительной
+        double right = 1;
         while (f(right, a) <= 0) {
             right *= 2;
         }
-        // Левая граница - 0, так как f(0) = a < 0
         return {0, right};
     }
 }
 
-// Метод бисекции для нахождения корня уравнения
-// Принимает:
-//   a - параметр уравнения
-//   left, right - границы интервала, содержащего корень
-//   epsilon - требуемая точность
-void bisection(double a, double left, double right, double epsilon) {
-    int iter = 0; // Счетчик итераций
-    // Продолжаем, пока длина интервала больше заданной точности
-    while (right - left > epsilon) {
-        double mid = (left + right) / 2; // Середина интервала
-        double f_mid = f(mid, a); // Значение функции в середине
+inline double bisection(double a, double left, double right, double epsilon) {
+    int iter = 0;
+    while (right - left > epsilon && iter < 1000) {
+        double mid = (left + right) / 2;
+        double f_mid = f(mid, a);
         std::cout << "Бисекция, итерация " << iter << ": mid = " << mid << ", f(mid) = " << f_mid << std::endl;
-        
-        // Если нашли точный корень (маловероятно для чисел с плавающей точкой)
-        if (f_mid == 0) {
-            std::cout << "Точный корень найден: " << mid << std::endl;
-            return;
+        if (f_mid == 0.0) {
+            return mid;
         }
-        
-        // Выбираем новую границу в зависимости от знака функции
         if (f_mid * f(left, a) < 0) {
-            right = mid; // Корень в левой половине
+            right = mid;
         } else {
-            left = mid; // Корень в правой половине
+            left = mid;
         }
         iter++;
-        
-        // Защита от бесконечного цикла
-        if (iter > 1000) {
-            std::cerr << "Бисекция: превышено максимальное число итераций!" << std::endl;
-            break;
-        }
     }
-    // Возвращаем середину последнего интервала как приближенный корень
     double root = (left + right) / 2;
-    std::cout << "Метод бисекции: корень = " << root << ", f(root) = " << f(root, a) << std::endl;
+    std::cout << GREEN << "Метод бисекции: корень = " << root << ", f(root) = " << f(root, a) << RESET << std::endl;
+    return root;
 }
 
-// Метод Ньютона для нахождения корня уравнения
-// Принимает:
-//   a - параметр уравнения
-//   x0 - начальное приближение
-//   epsilon - требуемая точность
-void newton(double a, double x0, double epsilon) {
-    double x = x0; // Текущее приближение
-    double delta = 1; // Разница между приближениями
-    int iter = 0; // Счетчик итераций
-    // Продолжаем, пока изменение больше заданной точности
-    while (std::abs(delta) > epsilon) {
-        double fx = f(x, a); // Значение функции
-        double dfx = df(x); // Значение производной
-        
-        // Проверка на слишком малую производную (может привести к делению на 0)
-        if (std::abs(dfx) < 1e-10) {
-            std::cerr << "Производная близка к нулю! Метод Ньютона не может продолжаться." << std::endl;
+inline double newton(double a, double x0, double epsilon) {
+    double x = x0;
+    double delta = 1.0;
+    int iter = 0;
+    while (std::abs(delta) > epsilon && iter < 1000) {
+        double fx = f(x, a);
+        double dfx = df(x);
+        if (std::abs(dfx) < 1e-12) {
+            std::cerr << RED << "Производная близка к нулю!" << RESET << std::endl;
             break;
         }
-        
-        delta = fx / dfx; // Вычисляем поправку
-        x -= delta; // Обновляем приближение
+        delta = fx / dfx;
+        x -= delta;
         std::cout << "Ньютон, итерация " << iter << ": x = " << x << ", f(x) = " << f(x, a) << std::endl;
         iter++;
-        
-        // Защита от бесконечного цикла
-        if (iter > 1000) {
-            std::cerr << "Метод Ньютона: превышено максимальное число итераций!" << std::endl;
-            break;
-        }
     }
-    std::cout << "Метод Ньютона: корень = " << x << ", f(root) = " << f(x, a) << std::endl;
+    std::cout << GREEN << "Метод Ньютона: корень = " << x << ", f(root) = " << f(x, a) << RESET << std::endl;
+    return x;
+}
+
+void run_tests() {
+    std::cout << BLUE << "=== Запуск тестов ===" << RESET << std::endl;
+    const double eps = 1e-10;
+    struct Test { double a; };
+    std::vector<Test> tests = {
+        {2.0}, {-2.0}, {1e-6}, {-1e-6}, {8e-11}, {-8e-11}, {10.0}, {-10.0}, {1000.0}, {-1000.0}
+    };
+    for (auto t : tests) {
+        auto [left, right] = find_interval(t.a);
+        double x0 = (std::abs(t.a) < 1e-5) ? -t.a : (left + right) / 2;
+        std::cout << BLUE << "a = " << t.a << RESET << std::endl;
+        std::cout << BLUE << "---Бисекция---" << RESET << std::endl;
+        double root_b = bisection(t.a, left, right, eps);
+        std::cout << BLUE << "---Ньютон---" << RESET << std::endl;
+        double root_n = newton(t.a, x0, eps);
+        std::cout << GREEN << "Результаты для сравнения: Ньютон: " << root_n << " Бисекции: " << root_b << RESET << std::endl;
+        std::cout << "-----------------------------" << std::endl;
+    }
+    std::cout << BLUE << "=== Тестирование завершено ===" << RESET << std::endl;
 }
 
 int main() {
-    double a;
-    std::cout << "Введите a: ";
-    std::cin >> a;
-
-    // Находим интервал, содержащий корень
-    auto [left, right] = find_interval(a);
-    double epsilon = 1e-10; // Точность вычислений
-
-    std::cout << "Интервал: [" << left << ", " << right << "]" << std::endl;
-
-    // Начальное приближение для метода Ньютона (середина интервала)
-    double x0 = (left + right) / 2;
-    std::cout << "Начальное приближение для Ньютона: " << x0 << std::endl;
-
-    // Выполняем оба метода для сравнения
-    bisection(a, left, right, epsilon);
-    newton(a, x0, epsilon);
-
+    run_tests();
     return 0;
 }
